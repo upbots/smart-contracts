@@ -1,0 +1,10 @@
+*
+!package*.json
+!yarn.lock
+!contracts
+!migrations
+!utils
+!truffle-config.js
+!start.sh
+!docker/start.sh
+

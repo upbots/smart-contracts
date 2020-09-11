@@ -1,0 +1,15 @@
+# Docker Compose description of the combined application.
+#
+# 'docker-compose up' will run this.
+version: "3.7" # requires Docker Compose 1.13 or later
+
+# This section describes the various containers (services).
+services:
+  deployer:
+    build:
+      context: ../
+      dockerfile: docker/Dockerfile
+    volumes:
+      - ../.secret:/usr/src/app/.secret
+    environment:
+      NETWORK: "goerli"
