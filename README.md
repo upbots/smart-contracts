@@ -70,6 +70,42 @@ Find the simplest ERC-20 compatible Ethereum smart-contract which posseses the f
 - [:heavy_check_mark:] upgradable
 - [:x:] mint no external fonction can trigger a mint of token
 
+# Redeem token SC
+
+## Definition and features
+
+the redeem contract can have a balance of any ERC20 token and let a beneficiary, gradually in a linear fashion until start + duration redeem the token.
+
+It is an ownable contract meaning that the owner is set to the address that deploys the smart contract.
+
+At start + duration all the balance will have been redeemed.
+
+_**blocked period**_
+
+We can set a block duration period during which no redeem is possible.
+
+_**revocation**_
+
+The sc allows the owner to revoke the redeem. Tokens already vested
+remain in the contract, the rest are returned to the owner.
+
+## Deployment
+
+a script located in migration/helpers/redeem.js let you deploy a redeem SC in the format `node redeem.js ADDRESS_OF_BENEFICIARY BLOCKED_DURATION OVERALL_DURATION START_DATE`
+with `START_DATE` being an optional parameter if leave empty it will be `Date.now()`
+
+example let's deploy a redeem SC with 0x17Ab56648020786afa7bD4119E70A57f427391a1 as a beneficiary that will start now + 2 hour and last during 4 hours.
+
+```
+node redeem.js 0x17Ab56648020786afa7bD4119E70A57f427391a1 7200 14400
+```
+
+If we are to send 100 of UBXT token now we wouldn't be able to redeem any token during two hours. After that blocking period we would be able to redeem 50 UBXT and then we would be able to redeem 50 UBXT within two hours.
+
+## Tests
+
+`redeem_test.js` deploys and test the redeem SC. It works thanks to ganache convenient time function like `evm_increaseTime`.
+
 # API
 
 ## transfer coins

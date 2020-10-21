@@ -3,14 +3,13 @@ pragma solidity ^0.7.0;
 import "./utils/wrapper/SafeERC20.sol";
 import "./utils/Ownable.sol";
 import "./utils/math/SafeMath.sol";
-import "./utils/upgradeability/Initializable.sol";
 
 /**
  * @title TokenRedeem
  * @dev A token holder contract that can release its token balance gradually
  *  with a block and redeem period. Optionally revocable by the owner.
  */
-contract TokenRedeemUpgradeSafe is Initializable, Ownable {
+contract TokenRedeem is Ownable {
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
 
@@ -41,29 +40,13 @@ contract TokenRedeemUpgradeSafe is Initializable, Ownable {
      * @param revocable whether the redeem is revocable or not
      */
 
-    function __TokenRedeem_init(
+    constructor(
         address beneficiary,
         uint256 start,
         uint256 blockDuration,
         uint256 duration,
         bool revocable
-    ) internal initializer {
-        __TokenRedeem_init_unchained(
-            beneficiary,
-            start,
-            blockDuration,
-            duration,
-            revocable
-        );
-    }
-
-    function __TokenRedeem_init_unchained(
-        address beneficiary,
-        uint256 start,
-        uint256 blockDuration,
-        uint256 duration,
-        bool revocable
-    ) internal initializer {
+    )  {
         require(
             beneficiary != address(0),
             "TokenRedeem: beneficiary is the zero address"
@@ -79,7 +62,7 @@ contract TokenRedeemUpgradeSafe is Initializable, Ownable {
             start.add(duration) > block.timestamp,
             "TokenRedeem: final time is before current time"
         );
-
+        Ownable._onInitialize(msg.sender);
         _beneficiary = beneficiary;
         _revocable = revocable;
         _duration = duration;
