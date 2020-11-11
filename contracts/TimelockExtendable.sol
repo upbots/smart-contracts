@@ -18,51 +18,30 @@ import "./utils/Ownable.sol";
 contract TimelockExtendable is Initializable, Ownable {
     using SafeERC20 for IERC20;
 
-    // ERC20 basic token contract being held
-    IERC20 private _token;
+    /// ERC20 basic token contract being held
+    IERC20 public token;
 
-    // beneficiary of tokens after they are released
-    address private _beneficiary;
+    /// Beneficiary of tokens after they are released
+    address public beneficiary;
 
-    // timestamp when token release is enabled
-    uint256 private _releaseTime;
+    /// Timestamp when token release is enabled
+    uint256 public releaseTime;
 
     function initialize(
-        IERC20 token,
-        address beneficiary,
-        uint256 releaseTime,
-        address owner
+        IERC20 _token,
+        address _beneficiary,
+        uint256 _releaseTime,
+        address _owner
     ) public initializer {
         require(
-            releaseTime > block.timestamp,
+            _releaseTime > block.timestamp,
             "TokenTimelock: release time is before current time"
         );
-        _token = token;
-        _beneficiary = beneficiary;
-        _releaseTime = releaseTime;
+        token = _token;
+        beneficiary = _beneficiary;
+        releaseTime = _releaseTime;
         //init the owner
-        Ownable._onInitialize(owner);
-    }
-
-    /**
-     * @return the token being held.
-     */
-    function token() public view returns (IERC20) {
-        return _token;
-    }
-
-    /**
-     * @return the beneficiary of the tokens.
-     */
-    function beneficiary() public view returns (address) {
-        return _beneficiary;
-    }
-
-    /**
-     * @return the time when the tokens are released.
-     */
-    function releaseTime() public view returns (uint256) {
-        return _releaseTime;
+        Ownable._onInitialize(_owner);
     }
 
     /**
@@ -72,29 +51,29 @@ contract TimelockExtendable is Initializable, Ownable {
         _release();
     }
 
-    function releaseAndExtend(uint256 newReleaseTime) public virtual onlyOwner {
+    function releaseAndExtend(uint256 _newReleaseTime) public virtual onlyOwner {
         require(
-            block.timestamp >= _releaseTime,
+            block.timestamp >= releaseTime,
             "TokenTimelock: current time is before release time"
         );
         require(
-            newReleaseTime > block.timestamp,
+            _newReleaseTime > block.timestamp,
             "TokenTimelock: release time is before current time"
         );
         _release();
-        _releaseTime = newReleaseTime;
+        releaseTime = _newReleaseTime;
     }
 
     function _release() internal onlyOwner {
         // solhint-disable-next-line not-rely-on-time
         require(
-            block.timestamp >= _releaseTime,
+            block.timestamp >= releaseTime,
             "TokenTimelock: current time is before release time"
         );
 
-        uint256 amount = _token.balanceOf(address(this));
+        uint256 amount = token.balanceOf(address(this));
         require(amount > 0, "TokenTimelock: no tokens to release");
 
-        _token.safeTransfer(_beneficiary, amount);
+        token.safeTransfer(beneficiary, amount);
     }
 }
