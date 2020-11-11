@@ -53,10 +53,6 @@ contract TimelockExtendable is Initializable, Ownable {
 
     function releaseAndExtend(uint256 _newReleaseTime) public virtual onlyOwner {
         require(
-            block.timestamp >= releaseTime,
-            "TokenTimelock: current time is before release time"
-        );
-        require(
             _newReleaseTime > block.timestamp,
             "TokenTimelock: release time is before current time"
         );
@@ -64,7 +60,7 @@ contract TimelockExtendable is Initializable, Ownable {
         releaseTime = _newReleaseTime;
     }
 
-    function _release() internal onlyOwner {
+    function _release() private {
         // solhint-disable-next-line not-rely-on-time
         require(
             block.timestamp >= releaseTime,
