@@ -12,7 +12,7 @@ contract PauserRole is Initializable {
 
     Roles.Role private _pausers;
 
-    function initialize(address sender) public virtual initializer {
+    function initialize(address sender) internal virtual initializer {
         if (!isPauser(sender)) {
             _addPauser(sender);
         }

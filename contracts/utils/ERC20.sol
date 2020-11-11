@@ -43,7 +43,7 @@ contract ERC20 is Context, Initializable, IERC20, ERC20Storage {
         string memory name,
         string memory symbol,
         uint8 decimals
-    ) public initializer {
+    ) internal initializer {
         _onInitialize(name, symbol, decimals);
     }
 
