@@ -22,7 +22,7 @@ abstract contract InitializableUpgradeabilityProxy is BaseUpgradeabilityProxy {
         virtual
         payable
     {
-        require(_implementation() == address(0));
+        require(_implementation() == address(0), "Implementation contract needs to be explicitly set in the initializer");
         assert(
             DIAMOND_STORAGE_POSITION ==
                 keccak256("diamond.standard.diamond.storage.proxy")
@@ -31,7 +31,7 @@ abstract contract InitializableUpgradeabilityProxy is BaseUpgradeabilityProxy {
         _setImplementation(_logic);
         if (_data.length > 0) {
             (bool success, ) = _logic.delegatecall(_data);
-            require(success);
+            require(success, "Call delegation to Implementation contract was not successful ");
         }
     }
 }
