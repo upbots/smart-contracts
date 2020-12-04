@@ -1,7 +1,7 @@
 {
   "name": "Upbot-Smart-Contracts",
   "version": "1.0.0",
-  "description": "Upbot ERC-20 Ethereum token and more",
+  "description": "Upbots Ethereum/Binance tokens and more",
   "main": "start.js",
   "scripts": {
     "lint": "yarn run lint:prettier && yarn run lint:js",
@@ -16,6 +16,7 @@
     "url": "git+https://github.com/upbots/smart-contracts.git"
   },
   "author": "@zgorizzo",
+  "contributors": "@tkali",
   "license": "MIT",
   "bugs": {
     "url": "https://github.com/upbots/smart-contracts/issues"
