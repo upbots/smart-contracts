@@ -1,22 +1,12 @@
 /* eslint-disable no-console */
 /* eslint-disable import/no-extraneous-dependencies */
-const HDWalletProvider = require("@truffle/hdwallet-provider");
-
-const fs = require("fs");
-
 const {exit} = require("process");
-
-const mnemonic = fs.readFileSync(".secret").toString().trim();
+const Web3 = require("web3");
+const config = require("../truffle-config");
 
 const network = process.argv.slice(2)[0];
+const prov = config.networks[network].provider();
 
-const PROJECT_ID = fs.readFileSync(".secret.infura").toString().trim();
-const infuraURL = `https://${network}.infura.io/v3/${PROJECT_ID}`;
-console.log("-----------infuraURL:", infuraURL);
-const prov = new HDWalletProvider(mnemonic, infuraURL);
-
-const Web3 = require("web3");
-// const web3 = new Web3(Web3.givenProvider || infuraURL);
 const web3 = new Web3(prov);
 const getBalances = async (addresses) => {
   const bal1 = await web3.eth.getBalance(addresses[0]);
@@ -26,6 +16,7 @@ const getBalances = async (addresses) => {
   const bal5 = await web3.eth.getBalance(addresses[4]);
   return [bal1, bal2, bal3, bal4, bal5];
 };
+
 getBalances(prov.addresses).then(async (balances) => {
   if (balances[0] < 200000000000000000) {
     console.error(
