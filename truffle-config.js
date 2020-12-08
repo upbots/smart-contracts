@@ -92,7 +92,7 @@ module.exports = {
       confirmations: 10,
       timeoutBlocks: 200,
       skipDryRun: true,
-      gas: 4500000,
+      gas: 3000000,
       gasPrice: "200000000000", // 200 gwei (in wei)
     },
     bsc_production: {
