@@ -24,17 +24,30 @@ contract BUbxTokenPeg is Initializable, Ownable, CanReclaimEther {
     event ValidatorRemoved(address indexed validator);
     event ClaimValidated(address indexed binanceAddr, uint256 amount);
 
-    function addValidator(address validator) external onlyOwner {
-        require(!validators[validator], "Validator already added");
+    function initialize(
+        IERC20 token,
+        address owner,
+        address[] memory validators
+    ) public initializer {
+        require(
+            validators.length > 0,
+            "At least one validator should be defined"
+        );
 
-        validators[validator] = true;
+        Ownable._onInitialize(owner);
+
+        for (uint256 i = 1; i < validators.length; ++i) {
+            _addValidator(validators[i]);
+        }
+    }
+
+    function addValidator(address validator) public onlyOwner {
+        _addValidator(validator);
         emit ValidatorAdded(validator);
     }
 
-    function removeValidator(address validator) external onlyOwner {
-        require(validators[validator], "There is no such validator");
-
-        validators[validator] = false;
+    function removeValidator(address validator) public onlyOwner {
+        _removeValidator(validator);
         emit ValidatorRemoved(validator);
     }
 
@@ -56,7 +69,7 @@ contract BUbxTokenPeg is Initializable, Ownable, CanReclaimEther {
         uint256 amount,
         uint256 nonce,
         bytes calldata signature
-    ) internal {
+    ) internal view {
         bytes32 hash = keccak256(abi.encodePacked(binanceAddr, amount, nonce));
         bytes32 messageHash = hash.toEthSignedMessageHash();
         address validator = messageHash.recover(signature);
@@ -65,20 +78,13 @@ contract BUbxTokenPeg is Initializable, Ownable, CanReclaimEther {
         require(validators[validator], "Claim is not valid");
     }
 
-    function initialize(
-        IERC20 token,
-        address owner,
-        address[] memory validators
-    ) public initializer {
-        require(
-            validators.length > 0,
-            "At least one validator should be defined"
-        );
+    function _addValidator(address validator) internal {
+        require(!validators[validator], "Validator already added");
+        validators[validator] = true;
+    }
 
-        Ownable._onInitialize(owner);
-
-        for (uint256 i = 1; i < validators.length; ++i) {
-            this.addValidator(validators[i]);
-        }
+    function _removeValidator(address validator) internal {
+        require(validators[validator], "There is no such validator");
+        validators[validator] = false;
     }
 }

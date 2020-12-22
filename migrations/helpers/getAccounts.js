@@ -5,6 +5,9 @@ function getAccounts(accounts, web3Utils) {
   const pauser1 = accounts[3];
   const pauser2 = accounts[4];
   const pausers = [pauser1, pauser2];
+  const validator1 = accounts[5];
+  const validator2 = accounts[6];
+  const validators = [validator1, validator2];
 
   /**
    * Step 3 Transfers to holders
@@ -32,6 +35,12 @@ function getAccounts(accounts, web3Utils) {
    */
   const newProxyAdmin = "";
 
+  /**
+   * Optional: Transfer tokens from this account to BUbxTokenPeg
+   * if empty it will use original tokenHolder account
+   */
+  const binanceTokenHolder = "";
+
   return {
     proxyAdmin,
     tokenHolder,
@@ -40,6 +49,9 @@ function getAccounts(accounts, web3Utils) {
     newTokenOwner,
     newProxyAdmin,
     holders,
+    validators,
+    binanceTokenHolder,
+    binancePegOwner: tokenOwner,
   };
 }
 module.exports = getAccounts;
