@@ -25,7 +25,7 @@ module.exports = async (deployer, network, accounts) => {
   /**
    * Constants
    */
-  const { proxyAdmin, tokenOwner, validators } = getAccounts(accounts);
+  const {proxyAdmin, tokenOwner, validators} = getAccounts(accounts);
 
   console.log(info("Setting up UBXT token peg for Binance..."));
   console.log(`Owner: ${log(tokenOwner)}`);

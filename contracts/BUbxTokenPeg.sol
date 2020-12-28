@@ -17,12 +17,12 @@ import "./utils/cryptography/ECDSA.sol";
 contract BUbxTokenPeg is Initializable, Ownable, CanReclaimEther {
     using ECDSA for bytes32;
 
-    mapping(address => bool) public validators;
+    mapping(address => bool) private _validators;
     mapping(uint256 => bool) private _seenNonces;
 
     event ValidatorAdded(address indexed validator);
     event ValidatorRemoved(address indexed validator);
-    event ClaimValidated(address indexed binanceAddr, uint256 amount);
+    event ClaimApproved(address indexed binanceAddr, uint256 amount);
 
     function initialize(
         IERC20 token,
@@ -36,7 +36,7 @@ contract BUbxTokenPeg is Initializable, Ownable, CanReclaimEther {
 
         Ownable._onInitialize(owner);
 
-        for (uint256 i = 1; i < validators.length; ++i) {
+        for (uint256 i = 0; i < validators.length; ++i) {
             _addValidator(validators[i]);
         }
     }
@@ -56,35 +56,35 @@ contract BUbxTokenPeg is Initializable, Ownable, CanReclaimEther {
         uint256 amount,
         uint256 nonce,
         bytes calldata signature
-    ) external {
-        require(!_seenNonces[nonce], "Claim already validated");
+    ) public {
+        require(!_seenNonces[nonce], "Claim already approved");
 
         _validate(binanceAddr, amount, nonce, signature);
         _seenNonces[nonce] = true;
-        emit ClaimValidated(binanceAddr, amount);
+        emit ClaimApproved(binanceAddr, amount);
     }
 
     function _validate(
         address binanceAddr,
         uint256 amount,
         uint256 nonce,
-        bytes calldata signature
+        bytes memory signature
     ) internal view {
         bytes32 hash = keccak256(abi.encodePacked(binanceAddr, amount, nonce));
         bytes32 messageHash = hash.toEthSignedMessageHash();
         address validator = messageHash.recover(signature);
 
         // TODO: check if hash compare should be implemented
-        require(validators[validator], "Claim is not valid");
+        require(_validators[validator], "Claim is not valid");
     }
 
     function _addValidator(address validator) internal {
-        require(!validators[validator], "Validator already added");
-        validators[validator] = true;
+        require(!_validators[validator], "Validator already added");
+        _validators[validator] = true;
     }
 
     function _removeValidator(address validator) internal {
-        require(validators[validator], "There is no such validator");
-        validators[validator] = false;
+        require(_validators[validator], "There is no such validator");
+        _validators[validator] = false;
     }
 }
