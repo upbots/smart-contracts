@@ -17,9 +17,7 @@ module.exports = async (deployer, network, accounts) => {
   const web3 = initWeb3(network);
 
   if (!network.match(/bsc|develop/)) {
-    console.log(
-      chalk.blue("Skipping: This migration is for Binance network only"),
-    );
+    console.log(info("Skipping: This migration is for Binance network only"));
     return;
   }
 
@@ -34,9 +32,7 @@ module.exports = async (deployer, network, accounts) => {
 
   console.log(`Deploying Proxy smart contract on network:${log(network)}`);
 
-  const pegProxy = await Proxy.new();
-
-  console.log(`Proxy Contract deployed at address ${log(pegProxy.address)}`);
+  await deployer.deploy(Proxy);
 
   console.log("Deploying BUbxTokenPeg smart");
 
@@ -45,6 +41,7 @@ module.exports = async (deployer, network, accounts) => {
   console.log(`Peg Contract deployed at address ${log(BUbxTokenPeg.address)}`);
 
   // TODO: this token needs to be an argument passed to peg
+  const pegProxy = await Proxy.deployed();
   const ubxtProxy = await UbxTokenProxy.deployed();
   const ubxToken = await UbxToken.at(ubxtProxy.address);
   const peg = await BUbxTokenPeg.deployed();
