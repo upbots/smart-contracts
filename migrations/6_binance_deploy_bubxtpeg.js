@@ -8,7 +8,8 @@ const log = chalk.yellow;
 
 const BUbxTokenPeg = artifacts.require("BUbxTokenPeg");
 const UbxToken = artifacts.require("UbxToken");
-const Proxy = artifacts.require("OwnedUpgradeabilityProxy");
+const UbxTokenProxy = artifacts.require("OwnedUpgradeabilityProxy");
+const Proxy = artifacts.require("BUbxTokenPegProxy");
 const initWeb3 = require("./helpers/web3Provider");
 const getAccounts = require("./helpers/getAccounts");
 
@@ -17,7 +18,7 @@ module.exports = async (deployer, network, accounts) => {
 
   if (!network.match(/bsc|develop/)) {
     console.log(
-      chalk.blue("Skipping: This migration is for Binance network only")
+      chalk.blue("Skipping: This migration is for Binance network only"),
     );
     return;
   }
@@ -44,7 +45,8 @@ module.exports = async (deployer, network, accounts) => {
   console.log(`Peg Contract deployed at address ${log(BUbxTokenPeg.address)}`);
 
   // TODO: this token needs to be an argument passed to peg
-  const ubxToken = await UbxToken.deployed();
+  const ubxtProxy = await UbxTokenProxy.deployed();
+  const ubxToken = await UbxToken.at(ubxtProxy.address);
   const peg = await BUbxTokenPeg.deployed();
 
   const initializeData = web3.eth.abi.encodeFunctionCall(
@@ -67,7 +69,7 @@ module.exports = async (deployer, network, accounts) => {
         },
       ],
     },
-    [ubxToken.address, tokenOwner, validators]
+    [ubxToken.address, tokenOwner, validators],
   );
 
   await pegProxy.initialize(peg.address, proxyAdmin, initializeData, {

@@ -2,13 +2,11 @@
 
 pragma solidity ^0.7.0;
 
-import "./utils/upgradeability/Initializable.sol";
-import "./utils/ERC20.sol";
-import "./utils/ERC20Burnable.sol";
-import "./utils/Ownable.sol";
-import "./utils/reclaim/CanReclaimEther.sol";
-import "./utils/reclaim/CanReclaimToken.sol";
-import "./utils/cryptography/ECDSA.sol";
+import "../utils/upgradeability/Initializable.sol";
+import "../utils/ERC20.sol";
+import "../utils/Ownable.sol";
+import "../utils/reclaim/CanReclaimEther.sol";
+import "../utils/cryptography/ECDSA.sol";
 
 /**
  * @title BUbxTokenPeg
