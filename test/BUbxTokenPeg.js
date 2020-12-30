@@ -1,16 +1,13 @@
 /* eslint-disable no-undef */
-const {
-  BN,
-  constants,
-  expectEvent,
-  expectRevert,
-} = require("@openzeppelin/test-helpers");
+const {BN, expectEvent, expectRevert} = require("@openzeppelin/test-helpers");
 
 const sign = require("./helpers/sign");
+const encodeCall = require("./helpers/encodeCall");
 
 const UbxToken = artifacts.require("UbxToken");
 const BUbxTokenPeg = artifacts.require("BUbxTokenPeg");
-const OwnedUpgradeabilityProxy = artifacts.require("OwnedUpgradeabilityProxy");
+const BUbxTokenPegProxy = artifacts.require("BUbxTokenPegProxy");
+const UbxTokenProxy = artifacts.require("OwnedUpgradeabilityProxy");
 
 contract("BUbxTokenPeg_V0", async (accounts) => {
   const [
@@ -21,46 +18,109 @@ contract("BUbxTokenPeg_V0", async (accounts) => {
     binanceAccount,
     someAccount,
     otherAccount,
+    ubxtHolder,
   ] = accounts;
 
   beforeEach(async () => {
-    const validators = [validator1, validator2];
-    const proxy = await OwnedUpgradeabilityProxy.new({from: proxyAdmin});
-    const peg = await BUbxTokenPeg.new();
-    const ubxt = await UbxToken.deployed();
-
-    const initializeData = web3.eth.abi.encodeFunctionCall(
-      {
-        name: "initialize",
-        type: "function",
-        inputs: [
-          {
-            type: "address",
-            internalType: "contract IERC20",
-            name: "token",
-          },
-          {
-            type: "address",
-            name: "owner",
-          },
-          {
-            type: "address[]",
-            name: "validators",
-          },
-        ],
-      },
-      [ubxt.address, owner, validators],
+    const ubxt = await UbxToken.new();
+    const ubxtProxy = await UbxTokenProxy.new({from: proxyAdmin});
+    const initialSupply = new BN("500000000000000000000000000");
+    const initializeUbxt = encodeCall(
+      "initialize",
+      [
+        {
+          type: "string",
+          name: "name",
+        },
+        {
+          type: "string",
+          name: "symbol",
+        },
+        {
+          type: "uint8",
+          name: "decimals",
+        },
+        {
+          type: "uint256",
+          name: "initialsupply",
+        },
+        {
+          type: "address",
+          name: "initialHolder",
+        },
+        {
+          type: "address",
+          name: "owner",
+        },
+        {
+          type: "address[]",
+          name: "pausers",
+        },
+      ],
+      [
+        "UpBots",
+        "UBXT",
+        18,
+        web3.utils.toHex(initialSupply),
+        ubxtHolder,
+        owner,
+        [validator1, validator2],
+      ],
     );
 
-    await proxy.initialize(peg.address, proxyAdmin, initializeData, {
+    await ubxtProxy.initialize(ubxt.address, proxyAdmin, initializeUbxt, {
+      from: proxyAdmin,
+    });
+    const tokenInstance = await UbxToken.at(ubxtProxy.address);
+
+    const peg = await BUbxTokenPeg.new();
+    const pegProxy = await BUbxTokenPegProxy.new({from: proxyAdmin});
+    const validators = [validator1, validator2];
+    const initializePeg = encodeCall(
+      "initialize",
+      [
+        {
+          type: "address",
+          internalType: "contract IERC20",
+          name: "token",
+        },
+        {
+          type: "address",
+          name: "owner",
+        },
+        {
+          type: "address[]",
+          name: "validators",
+        },
+      ],
+      [tokenInstance.address, owner, validators],
+    );
+
+    await pegProxy.initialize(peg.address, proxyAdmin, initializePeg, {
       from: proxyAdmin,
     });
 
-    this.instance = await BUbxTokenPeg.at(proxy.address);
+    const pegInstance = await BUbxTokenPeg.at(pegProxy.address);
+
+    // add liquidity to fresh peg contract
+    await tokenInstance.transfer(pegInstance.address, initialSupply, {
+      from: ubxtHolder,
+    });
+
+    // expose deployed instances and variables to tests
+    this.instance = pegInstance;
+    this.token = tokenInstance;
+    this.supply = initialSupply;
   });
 
   describe("initialize", () => {
-    it("has liquidity to operate");
+    it("has liquidity to operate", async () => {
+      const balance = await this.token.balanceOf(this.instance.address, {
+        from: someAccount,
+      });
+
+      assert(balance.eq(this.supply));
+    });
   });
 
   describe("validators", () => {
@@ -133,7 +193,7 @@ contract("BUbxTokenPeg_V0", async (accounts) => {
         amount,
         nonce,
         signature,
-        {from: someAccount},
+        {from: binanceAccount},
       );
 
       expectEvent(receipt, "ClaimApproved", {
@@ -146,12 +206,12 @@ contract("BUbxTokenPeg_V0", async (accounts) => {
       const message = await web3.utils.soliditySha3(...params);
       const signature = await sign(message, validator1);
       await this.instance.claim(binanceAccount, amount, nonce, signature, {
-        from: someAccount,
+        from: binanceAccount,
       });
 
       await expectRevert(
         this.instance.claim(binanceAccount, amount, nonce, signature, {
-          from: someAccount,
+          from: binanceAccount,
         }),
         "Claim already approved",
       );
@@ -163,7 +223,7 @@ contract("BUbxTokenPeg_V0", async (accounts) => {
 
       await expectRevert(
         this.instance.claim(binanceAccount, new BN(666), nonce, signature, {
-          from: someAccount,
+          from: binanceAccount,
         }),
         "Claim is not valid",
       );
@@ -175,7 +235,7 @@ contract("BUbxTokenPeg_V0", async (accounts) => {
 
       await expectRevert(
         this.instance.claim(binanceAccount, amount, new BN(1337), signature, {
-          from: someAccount,
+          from: binanceAccount,
         }),
         "Claim is not valid",
       );
@@ -186,10 +246,10 @@ contract("BUbxTokenPeg_V0", async (accounts) => {
       const signature = await sign(message, validator1);
 
       await expectRevert(
-        this.instance.claim(otherAccount, amount, nonce, signature, {
-          from: someAccount,
+        this.instance.claim(binanceAccount, amount, nonce, signature, {
+          from: otherAccount,
         }),
-        "Claim is not valid",
+        "Claimer and sender mismatch",
       );
     });
 
@@ -199,13 +259,56 @@ contract("BUbxTokenPeg_V0", async (accounts) => {
 
       await expectRevert(
         this.instance.claim(binanceAccount, amount, nonce, signature, {
-          from: someAccount,
+          from: binanceAccount,
         }),
         "Claim is not valid",
       );
     });
 
-    it("transfers tokens for valid claim");
-    it("rejects claim when liquidity too low");
+    it("transfers tokens for valid claim", async () => {
+      const message = await web3.utils.soliditySha3(...params);
+      const signature = await sign(message, validator1);
+
+      const receipt = await this.instance.claim(
+        binanceAccount,
+        amount,
+        nonce,
+        signature,
+        {from: binanceAccount},
+      );
+
+      const balance = await this.token.balanceOf(binanceAccount, {
+        from: someAccount,
+      });
+
+      assert(balance.eq(new BN(80)));
+    });
+
+    it("rejects claim when liquidity too low", async () => {
+      const tooMuch = this.supply.add(new BN(1));
+      const params = [
+        {
+          type: "address",
+          value: binanceAccount,
+        },
+        {
+          type: "uint256",
+          value: tooMuch,
+        },
+        {
+          type: "uint256",
+          value: nonce,
+        },
+      ];
+      const message = await web3.utils.soliditySha3(...params);
+      const signature = await sign(message, validator1);
+
+      await expectRevert(
+        this.instance.claim(binanceAccount, tooMuch, nonce, signature, {
+          from: binanceAccount,
+        }),
+        "Claim exceeds liquidity",
+      );
+    });
   });
 });

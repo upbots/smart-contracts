@@ -14,9 +14,11 @@ import "../utils/cryptography/ECDSA.sol";
 
 contract BUbxTokenPeg is Initializable, Ownable, CanReclaimEther {
     using ECDSA for bytes32;
+    using SafeERC20 for IERC20;
 
     mapping(address => bool) private _validators;
     mapping(uint256 => bool) private _seenNonces;
+    IERC20 private _token;
 
     event ValidatorAdded(address indexed validator);
     event ValidatorRemoved(address indexed validator);
@@ -37,6 +39,8 @@ contract BUbxTokenPeg is Initializable, Ownable, CanReclaimEther {
         for (uint256 i = 0; i < validators.length; ++i) {
             _addValidator(validators[i]);
         }
+
+        _token = token;
     }
 
     function addValidator(address validator) public onlyOwner {
@@ -56,9 +60,18 @@ contract BUbxTokenPeg is Initializable, Ownable, CanReclaimEther {
         bytes calldata signature
     ) public {
         require(!_seenNonces[nonce], "Claim already approved");
+        require(
+            _token.balanceOf(address(this)) >= amount,
+            "Claim exceeds liquidity"
+        );
+        require((msg.sender == binanceAddr), "Claimer and sender mismatch");
 
         _validate(binanceAddr, amount, nonce, signature);
+
+        _token.safeTransfer(msg.sender, amount);
+
         _seenNonces[nonce] = true;
+
         emit ClaimApproved(binanceAddr, amount);
     }
 

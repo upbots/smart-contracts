@@ -15,15 +15,13 @@ const getAccounts = require("./helpers/getAccounts");
 
 module.exports = async (_, network, accounts) => {
   if (!network.match(/bsc|develop/)) {
-    console.log(
-      info("Skipping: This migration is for Binance network only"),
-    );
+    console.log(info("Skipping: This migration is for Binance network only"));
     return;
   }
 
   const web3 = initWeb3(network);
-  const { BN } = web3.utils;
-  const { tokenHolder, holders, binanceTokenHolder } = getAccounts(
+  const {BN} = web3.utils;
+  const {tokenHolder, holders, binanceTokenHolder} = getAccounts(
     accounts,
     web3.utils,
   );
@@ -54,7 +52,6 @@ module.exports = async (_, network, accounts) => {
   );
 
   if (tokenAmount.gt(new BN(0))) {
-
     console.log(info(`Transferring tokens to BUbxTokenPeg...`));
     console.log(`Token amount: ${log(tokenAmount)}`);
     console.log(`BUbxTokenPeg account: ${log(pegProxy.address)}`);
@@ -65,6 +62,5 @@ module.exports = async (_, network, accounts) => {
     });
   } else {
     console.log(error("Holder account has zero balance!"));
-    return;
   }
 };
