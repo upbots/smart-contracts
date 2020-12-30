@@ -22,7 +22,11 @@ contract BUbxTokenPeg is Initializable, Ownable, CanReclaimEther {
 
     event ValidatorAdded(address indexed validator);
     event ValidatorRemoved(address indexed validator);
-    event ClaimApproved(address indexed binanceAddr, uint256 amount);
+    event ClaimApproved(
+        address indexed to,
+        address indexed validator,
+        uint256 amount
+    );
 
     function initialize(
         IERC20 token,
@@ -66,13 +70,12 @@ contract BUbxTokenPeg is Initializable, Ownable, CanReclaimEther {
         );
         require((msg.sender == binanceAddr), "Claimer and sender mismatch");
 
-        _validate(binanceAddr, amount, nonce, signature);
+        address validator = _validate(binanceAddr, amount, nonce, signature);
 
         _token.safeTransfer(msg.sender, amount);
-
         _seenNonces[nonce] = true;
 
-        emit ClaimApproved(binanceAddr, amount);
+        emit ClaimApproved(binanceAddr, validator, amount);
     }
 
     function _validate(
@@ -80,13 +83,13 @@ contract BUbxTokenPeg is Initializable, Ownable, CanReclaimEther {
         uint256 amount,
         uint256 nonce,
         bytes memory signature
-    ) internal view {
+    ) internal view returns (address) {
         bytes32 hash = keccak256(abi.encodePacked(binanceAddr, amount, nonce));
         bytes32 messageHash = hash.toEthSignedMessageHash();
         address validator = messageHash.recover(signature);
 
-        // TODO: check if hash compare should be implemented
         require(_validators[validator], "Claim is not valid");
+        return validator;
     }
 
     function _addValidator(address validator) internal {

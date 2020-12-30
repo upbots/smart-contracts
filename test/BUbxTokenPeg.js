@@ -197,7 +197,8 @@ contract("BUbxTokenPeg_V0", async (accounts) => {
       );
 
       expectEvent(receipt, "ClaimApproved", {
-        binanceAddr: binanceAccount,
+        to: binanceAccount,
+        validator: validator1,
         amount,
       });
     });
