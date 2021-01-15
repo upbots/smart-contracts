@@ -20,12 +20,15 @@ contract BUbxTokenPeg is Initializable, Ownable, CanReclaimEther {
     mapping(uint256 => bool) private _seenNonces;
     IERC20 private _token;
 
+    enum Actions {Claim, Waive}
+
     event ValidatorAdded(address indexed validator);
     event ValidatorRemoved(address indexed validator);
-    event ClaimApproved(
-        address indexed to,
+    event ActionApproved(
+        address indexed account,
         address indexed validator,
-        uint256 amount
+        uint256 amount,
+        Actions action
     );
 
     function initialize(
@@ -57,38 +60,57 @@ contract BUbxTokenPeg is Initializable, Ownable, CanReclaimEther {
         emit ValidatorRemoved(validator);
     }
 
-    function claim(
-        address binanceAddr,
+    modifier balancing(
+        Actions action,
+        address account,
         uint256 amount,
         uint256 nonce,
         bytes calldata signature
-    ) public {
-        require(!_seenNonces[nonce], "Claim already approved");
+    ) {
+        require(!_seenNonces[nonce], "Action already approved");
+        require((msg.sender == account), "Account and sender mismatch");
+
+        address validator = _validate(account, amount, nonce, signature);
+        _;
+        _seenNonces[nonce] = true;
+
+        emit ActionApproved(account, validator, amount, action);
+    }
+
+    function claim(
+        address account,
+        uint256 amount,
+        uint256 nonce,
+        bytes calldata signature
+    ) public balancing(Actions.Claim, account, amount, nonce, signature) {
         require(
             _token.balanceOf(address(this)) >= amount,
             "Claim exceeds liquidity"
         );
-        require((msg.sender == binanceAddr), "Claimer and sender mismatch");
-
-        address validator = _validate(binanceAddr, amount, nonce, signature);
 
         _token.safeTransfer(msg.sender, amount);
-        _seenNonces[nonce] = true;
+    }
 
-        emit ClaimApproved(binanceAddr, validator, amount);
+    function waive(
+        address account,
+        uint256 amount,
+        uint256 nonce,
+        bytes calldata signature
+    ) public balancing(Actions.Waive, account, amount, nonce, signature) {
+        _token.transferFrom(msg.sender, address(this), amount);
     }
 
     function _validate(
-        address binanceAddr,
+        address account,
         uint256 amount,
         uint256 nonce,
         bytes memory signature
     ) internal view returns (address) {
-        bytes32 hash = keccak256(abi.encodePacked(binanceAddr, amount, nonce));
+        bytes32 hash = keccak256(abi.encodePacked(account, amount, nonce));
         bytes32 messageHash = hash.toEthSignedMessageHash();
         address validator = messageHash.recover(signature);
 
-        require(_validators[validator], "Claim is not valid");
+        require(_validators[validator], "Action is not valid");
         return validator;
     }
 

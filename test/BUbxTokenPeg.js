@@ -108,6 +108,7 @@ contract("BUbxTokenPeg_V0", async (accounts) => {
     });
 
     // expose deployed instances and variables to tests
+    this.Action = {Claim: new BN(0), Waive: new BN(1)};
     this.instance = pegInstance;
     this.token = tokenInstance;
     this.supply = initialSupply;
@@ -188,18 +189,15 @@ contract("BUbxTokenPeg_V0", async (accounts) => {
     it("approves valid claim", async () => {
       const message = await web3.utils.soliditySha3(...params);
       const signature = await sign(message, validator1);
-      const receipt = await this.instance.claim(
-        binanceAccount,
-        amount,
-        nonce,
-        signature,
-        {from: binanceAccount},
-      );
+      const receipt = await this.instance.claim(binanceAccount, amount, nonce, signature, {
+        from: binanceAccount,
+      });
 
-      expectEvent(receipt, "ClaimApproved", {
-        to: binanceAccount,
+      expectEvent(receipt, "ActionApproved", {
+        account: binanceAccount,
         validator: validator1,
         amount,
+        action: this.Action.Claim,
       });
     });
 
@@ -214,7 +212,7 @@ contract("BUbxTokenPeg_V0", async (accounts) => {
         this.instance.claim(binanceAccount, amount, nonce, signature, {
           from: binanceAccount,
         }),
-        "Claim already approved",
+        "Action already approved",
       );
     });
 
@@ -226,7 +224,7 @@ contract("BUbxTokenPeg_V0", async (accounts) => {
         this.instance.claim(binanceAccount, new BN(666), nonce, signature, {
           from: binanceAccount,
         }),
-        "Claim is not valid",
+        "Action is not valid",
       );
     });
 
@@ -238,7 +236,7 @@ contract("BUbxTokenPeg_V0", async (accounts) => {
         this.instance.claim(binanceAccount, amount, new BN(1337), signature, {
           from: binanceAccount,
         }),
-        "Claim is not valid",
+        "Action is not valid",
       );
     });
 
@@ -250,7 +248,7 @@ contract("BUbxTokenPeg_V0", async (accounts) => {
         this.instance.claim(binanceAccount, amount, nonce, signature, {
           from: otherAccount,
         }),
-        "Claimer and sender mismatch",
+        "Account and sender mismatch",
       );
     });
 
@@ -262,7 +260,7 @@ contract("BUbxTokenPeg_V0", async (accounts) => {
         this.instance.claim(binanceAccount, amount, nonce, signature, {
           from: binanceAccount,
         }),
-        "Claim is not valid",
+        "Action is not valid",
       );
     });
 
@@ -270,13 +268,9 @@ contract("BUbxTokenPeg_V0", async (accounts) => {
       const message = await web3.utils.soliditySha3(...params);
       const signature = await sign(message, validator1);
 
-      const receipt = await this.instance.claim(
-        binanceAccount,
-        amount,
-        nonce,
-        signature,
-        {from: binanceAccount},
-      );
+      await this.instance.claim(binanceAccount, amount, nonce, signature, {
+        from: binanceAccount,
+      });
 
       const balance = await this.token.balanceOf(binanceAccount, {
         from: someAccount,
@@ -309,6 +303,167 @@ contract("BUbxTokenPeg_V0", async (accounts) => {
           from: binanceAccount,
         }),
         "Claim exceeds liquidity",
+      );
+    });
+  });
+
+  describe("waive", () => {
+    const action = async (action, params, nonce, validator) => {
+      const [account, amount] = params.map((p) => p.value);
+      const message = await web3.utils.soliditySha3(...params, nonce);
+      const signature = await sign(message, validator);
+
+      return await this.instance[action](account, amount, nonce, signature, {
+        from: account,
+      });
+    };
+
+    it("waives amount given", async () => {
+      const amountWaived = new BN(100);
+      const params = [
+        {
+          type: "address",
+          value: binanceAccount,
+        },
+        {
+          type: "uint256",
+          value: amountWaived,
+        },
+      ];
+
+      await action("claim", params, new BN(123), validator1);
+
+      let initialBalance = await this.token.balanceOf(this.instance.address, {
+        from: someAccount,
+      });
+
+      assert(initialBalance.eq(this.supply.sub(amountWaived)));
+
+      await this.token.approve(this.instance.address, amountWaived, {from: binanceAccount});
+      const receipt = await action("waive", params, new BN(124), validator1);
+
+      expectEvent(receipt, "ActionApproved", {
+        account: binanceAccount,
+        validator: validator1,
+        amount: amountWaived,
+        action: this.Action.Waive,
+      });
+
+      initialBalance = await this.token.balanceOf(this.instance.address, {
+        from: someAccount,
+      });
+      assert(initialBalance.eq(this.supply));
+    });
+
+    it("waves amount not exceeding balance", async () => {
+      const claimParams = [
+        {
+          type: "address",
+          value: binanceAccount,
+        },
+        {
+          type: "uint256",
+          value: new BN(100),
+        },
+      ];
+      const waiveParams = [
+        {
+          type: "address",
+          value: binanceAccount,
+        },
+        {
+          type: "uint256",
+          value: new BN(120), //amount waived > claimed
+        },
+      ];
+      const allowance = new BN(999); //allowance > waived
+
+      await action("claim", claimParams, new BN(123), validator1);
+      await this.token.approve(this.instance.address, allowance, {from: binanceAccount});
+      await expectRevert(
+        action("waive", waiveParams, new BN(124), validator1),
+        "ERC20: transfer amount exceeds balance",
+      );
+    });
+
+    it("fails when waived twice with used nonce", async () => {
+      const params = [
+        {
+          type: "address",
+          value: binanceAccount,
+        },
+        {
+          type: "uint256",
+          value: new BN(60),
+        },
+      ];
+      const allowance = new BN(120);
+
+      await action("claim", params, new BN(123), validator1);
+      await action("claim", params, new BN(124), validator1);
+      await this.token.approve(this.instance.address, allowance, {from: binanceAccount});
+
+      await action("waive", params, new BN(125), validator1);
+
+      await expectRevert(
+        action("waive", params, new BN(123), validator1),
+        "Action already approved",
+      );
+      await expectRevert(
+        action("waive", params, new BN(125), validator1),
+        "Action already approved",
+      );
+    });
+
+    it("fails when sender is not the waiver", async () => {
+      const params = [
+        {
+          type: "address",
+          value: binanceAccount,
+        },
+        {
+          type: "uint256",
+          value: new BN(100),
+        },
+      ];
+      const allowance = new BN(100);
+      const message = await web3.utils.soliditySha3(...params, new BN(123));
+      const signature = await sign(message, validator1);
+
+      await action("claim", params, new BN(123), validator1);
+      await this.token.approve(this.instance.address, allowance, {from: binanceAccount});
+
+      await expectRevert(
+        this.instance.waive(binanceAccount, allowance, new BN(124), signature, {
+          from: someAccount,
+        }),
+        "Account and sender mismatch",
+      );
+    });
+
+    it("fails with fake signature", async () => {
+      const params = [
+        {
+          type: "address",
+          value: binanceAccount,
+        },
+        {
+          type: "uint256",
+          value: new BN(100),
+        },
+      ];
+      const allowance = new BN(100);
+      const message = await web3.utils.soliditySha3(...params, new BN(123));
+      const fakeSignature = await sign(message, someAccount);
+
+      await action("claim", params, new BN(123), validator1);
+      await this.token.approve(this.instance.address, allowance, {from: binanceAccount});
+
+      await expectRevert(
+        this.instance.waive(binanceAccount, allowance, new BN(124), fakeSignature, {
+          from: binanceAccount,
+        }),
+        "Action is not valid",
       );
     });
   });
