@@ -21,10 +21,7 @@ module.exports = async (_, network, accounts) => {
 
   const web3 = initWeb3(network);
   const {BN} = web3.utils;
-  const {tokenHolder, holders, binanceTokenHolder} = getAccounts(
-    accounts,
-    web3.utils,
-  );
+  const {tokenHolder, holders, binanceTokenHolder} = getAccounts(accounts, web3.utils);
 
   if (holders.length > 0) {
     console.log(

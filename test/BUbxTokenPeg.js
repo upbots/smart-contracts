@@ -201,6 +201,21 @@ contract("BUbxTokenPeg_V0", async (accounts) => {
       });
     });
 
+    it("transfers tokens for valid claim", async () => {
+      const message = await web3.utils.soliditySha3(...params);
+      const signature = await sign(message, validator1);
+
+      await this.instance.claim(binanceAccount, amount, nonce, signature, {
+        from: binanceAccount,
+      });
+
+      const balance = await this.token.balanceOf(binanceAccount, {
+        from: someAccount,
+      });
+
+      assert(balance.eq(new BN(80)));
+    });
+
     it("rejects already approved claim", async () => {
       const message = await web3.utils.soliditySha3(...params);
       const signature = await sign(message, validator1);
@@ -264,24 +279,9 @@ contract("BUbxTokenPeg_V0", async (accounts) => {
       );
     });
 
-    it("transfers tokens for valid claim", async () => {
-      const message = await web3.utils.soliditySha3(...params);
-      const signature = await sign(message, validator1);
-
-      await this.instance.claim(binanceAccount, amount, nonce, signature, {
-        from: binanceAccount,
-      });
-
-      const balance = await this.token.balanceOf(binanceAccount, {
-        from: someAccount,
-      });
-
-      assert(balance.eq(new BN(80)));
-    });
-
     it("rejects claim when liquidity too low", async () => {
       const tooMuch = this.supply.add(new BN(1));
-      const params = [
+      const claimParams = [
         {
           type: "address",
           value: binanceAccount,
@@ -295,7 +295,7 @@ contract("BUbxTokenPeg_V0", async (accounts) => {
           value: nonce,
         },
       ];
-      const message = await web3.utils.soliditySha3(...params);
+      const message = await web3.utils.soliditySha3(...claimParams);
       const signature = await sign(message, validator1);
 
       await expectRevert(
@@ -308,12 +308,12 @@ contract("BUbxTokenPeg_V0", async (accounts) => {
   });
 
   describe("waive", () => {
-    const action = async (action, params, nonce, validator) => {
+    const action = async (name, params, nonce, validator) => {
       const [account, amount] = params.map((p) => p.value);
       const message = await web3.utils.soliditySha3(...params, nonce);
       const signature = await sign(message, validator);
 
-      return await this.instance[action](account, amount, nonce, signature, {
+      return this.instance[name](account, amount, nonce, signature, {
         from: account,
       });
     };
@@ -373,10 +373,10 @@ contract("BUbxTokenPeg_V0", async (accounts) => {
         },
         {
           type: "uint256",
-          value: new BN(120), //amount waived > claimed
+          value: new BN(120), // amount waived > claimed
         },
       ];
-      const allowance = new BN(999); //allowance > waived
+      const allowance = new BN(999); // allowance > waived
 
       await action("claim", claimParams, new BN(123), validator1);
       await this.token.approve(this.instance.address, allowance, {from: binanceAccount});

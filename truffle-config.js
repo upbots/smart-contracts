@@ -29,11 +29,7 @@ module.exports = {
       network_id: "*", // Any network (default: none)
     },
     production: {
-      provider: () =>
-        new HDWalletProvider(
-          mnemonic,
-          `wss://mainnet.infura.io/ws/v3/${PROJECT_ID}`
-        ),
+      provider: () => new HDWalletProvider(mnemonic, `wss://mainnet.infura.io/ws/v3/${PROJECT_ID}`),
       network_id: 1, // mainnet's id
       gas: 8000000,
       gasPrice: 200000000000, // 200 gwei (in wei)
@@ -42,11 +38,7 @@ module.exports = {
       timeoutBlocks: 50,
     },
     goerli: {
-      provider: () =>
-        new HDWalletProvider(
-          mnemonic,
-          `wss://goerli.infura.io/ws/v3/${PROJECT_ID}`
-        ),
+      provider: () => new HDWalletProvider(mnemonic, `wss://goerli.infura.io/ws/v3/${PROJECT_ID}`),
       websockets: true, // (default: false)
       confirmations: 1, // (default: 0)
       network_id: 5, // goerli's id
@@ -56,11 +48,7 @@ module.exports = {
       skipDryRun: true, // Skip dry run before migrations? (default: false for public nets )
     },
     ropsten: {
-      provider: () =>
-        new HDWalletProvider(
-          mnemonic,
-          `wss://ropsten.infura.io/ws/v3/${PROJECT_ID}`
-        ),
+      provider: () => new HDWalletProvider(mnemonic, `wss://ropsten.infura.io/ws/v3/${PROJECT_ID}`),
       websockets: true, // (default: false)
       confirmations: 2, // (default: 0)
       network_id: 3, // ropsten's id
@@ -71,11 +59,7 @@ module.exports = {
       skipDryRun: true, // Skip dry run before migrations? (default: false for public nets )
     },
     rinkeby: {
-      provider: () =>
-        new HDWalletProvider(
-          mnemonic,
-          `https://rinkeby.infura.io/v3/${PROJECT_ID}`
-        ),
+      provider: () => new HDWalletProvider(mnemonic, `https://rinkeby.infura.io/v3/${PROJECT_ID}`),
       network_id: 4,
       gas: 4500000,
       gasPrice: 10000000000,
@@ -83,20 +67,16 @@ module.exports = {
     },
     bsc_development: {
       provider: () =>
-        new HDWalletProvider(
-          mnemonic,
-          `https://data-seed-prebsc-1-s1.binance.org:8545`
-        ),
+        new HDWalletProvider(mnemonic, `https://data-seed-prebsc-1-s1.binance.org:8545`),
       network_id: 97,
       confirmations: 10,
       timeoutBlocks: 200,
       skipDryRun: true,
-      gas: 3000000,
-      gasPrice: "200000000000", // 200 gwei (in wei)
+      gas: 8000000,
+      gasPrice: 20000000000,
     },
     bsc_production: {
-      provider: () =>
-        new HDWalletProvider(mnemonic, `https://bsc-dataseed1.binance.org`),
+      provider: () => new HDWalletProvider(mnemonic, `https://bsc-dataseed1.binance.org`),
       network_id: 56,
       confirmations: 10,
       timeoutBlocks: 200,
