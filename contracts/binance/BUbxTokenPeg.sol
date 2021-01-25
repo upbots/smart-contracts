@@ -36,10 +36,7 @@ contract BUbxTokenPeg is Initializable, Ownable, CanReclaimEther {
         address owner,
         address[] memory validators
     ) public initializer {
-        require(
-            validators.length > 0,
-            "At least one validator should be defined"
-        );
+        require(validators.length > 0, "At least one validator should be defined");
 
         Ownable._onInitialize(owner);
 
@@ -65,7 +62,7 @@ contract BUbxTokenPeg is Initializable, Ownable, CanReclaimEther {
         address account,
         uint256 amount,
         uint256 nonce,
-        bytes calldata signature
+        bytes memory signature
     ) {
         require(!_seenNonces[nonce], "Action already approved");
         require((msg.sender == account), "Account and sender mismatch");
@@ -81,12 +78,9 @@ contract BUbxTokenPeg is Initializable, Ownable, CanReclaimEther {
         address account,
         uint256 amount,
         uint256 nonce,
-        bytes calldata signature
+        bytes memory signature
     ) public balancing(Actions.Claim, account, amount, nonce, signature) {
-        require(
-            _token.balanceOf(address(this)) >= amount,
-            "Claim exceeds liquidity"
-        );
+        require(_token.balanceOf(address(this)) >= amount, "Claim exceeds liquidity");
 
         _token.safeTransfer(msg.sender, amount);
     }
@@ -95,7 +89,7 @@ contract BUbxTokenPeg is Initializable, Ownable, CanReclaimEther {
         address account,
         uint256 amount,
         uint256 nonce,
-        bytes calldata signature
+        bytes memory signature
     ) public balancing(Actions.Waive, account, amount, nonce, signature) {
         _token.transferFrom(msg.sender, address(this), amount);
     }
