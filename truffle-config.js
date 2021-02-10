@@ -38,7 +38,7 @@ module.exports = {
       timeoutBlocks: 50,
     },
     goerli: {
-      provider: () => new HDWalletProvider(mnemonic, `wss://goerli.infura.io/ws/v3/${PROJECT_ID}`),
+      provider: () => new HDWalletProvider(mnemonic, `https://goerli.infura.io/v3/${PROJECT_ID}`),
       websockets: true, // (default: false)
       confirmations: 1, // (default: 0)
       network_id: 5, // goerli's id
